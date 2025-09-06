@@ -41,6 +41,10 @@ func NewRouter(cfg config.Config, log *slog.Logger, authSvc *auth.Service, sqlLo
 		mux.Handle("POST /v1/auth/login", ah.Login())
 		mux.Handle("POST /v1/auth/refresh", ah.Refresh())
 		mux.Handle("GET /v1/auth/me", handlers.RequireAuth(authSvc)(ah.Me()))
+
+		// Admin endpoints - require ADMIN role
+		adminHandler := handlers.RequireAuth(authSvc)(handlers.RequireAdminRole()(ah.CreateUser()))
+		mux.Handle("POST /v1/admin/users", adminHandler)
 	}
 
 	// SQL log upload endpoint
