@@ -11,9 +11,10 @@ import (
 	"go-demo/internal/auth"
 	"go-demo/internal/config"
 	"go-demo/internal/http/handlers"
+	"go-demo/internal/sqllog"
 )
 
-func NewRouter(cfg config.Config, log *slog.Logger, authSvc *auth.Service) nhttp.Handler {
+func NewRouter(cfg config.Config, log *slog.Logger, authSvc *auth.Service, sqlLogRepo *sqllog.Repository) nhttp.Handler {
 	mux := nhttp.NewServeMux()
 
 	// Liveness and readiness
@@ -40,6 +41,12 @@ func NewRouter(cfg config.Config, log *slog.Logger, authSvc *auth.Service) nhttp
 		mux.Handle("POST /v1/auth/login", ah.Login())
 		mux.Handle("POST /v1/auth/refresh", ah.Refresh())
 		mux.Handle("GET /v1/auth/me", handlers.RequireAuth(authSvc)(ah.Me()))
+	}
+
+	// SQL log upload endpoint
+	if sqlLogRepo != nil {
+		up := handlers.NewSQLLogUpload(sqlLogRepo, log, cfg.MaxBodyBytes)
+		mux.Handle("POST /v1/sql-logs/upload", up.Upload())
 	}
 
 	// Compose middleware (order matters; first is outermost)
